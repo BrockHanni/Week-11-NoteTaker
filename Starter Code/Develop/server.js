@@ -1,10 +1,12 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const util = require('util');
 
 const PORT = process.env.PORT || 3001;
 const app = express();
 const database = require('./db/db.json');
+const readFileAsync = util.promisify(fs.readFile);
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -15,7 +17,9 @@ app.get('/notes', (req, res) => {
 });
 
 app.get('/api/notes', (req, res) => {
-    res.json(database.slice(1));
+    readFileAsync('./db/db.json').then((data) => 
+        res.json(JSON.parse(data)));
+    
 });
 
 app.post('/api/notes', (req, res) => {
@@ -34,23 +38,28 @@ app.get('*', (req, res) => {
 // the get with the * needs to be the last get or it will override the other gets
 
 
+const uuid = () => {
+    return Math.floor((1 + Math.random()) * 0x10000)
+      .toString(16)
+      .substring(1);
+  };
+
 function newNoteDb(body, notesArray) {
-    const newNote = body;
+    const newNotes = body;
     if (!Array.isArray(notesArray))
         notesArray = [];
     
     if (notesArray.length === 0)
-        notesArray.push(0);
     
     body.id = notesArray[0];
-    notesArray[0]++;
-
-    notesArray.push(newNote);
+    body.id = uuid()
+// change with uuid from unit 11 random id generator
+    notesArray.push(newNotes);
     fs.writeFileSync(
         path.join(__dirname, './db/db.json'),
         JSON.stringify(notesArray, null, 2)
     );
-    return newNote;
+    return newNotes;
 }
 
 function removeNoteDb(id, notesArray) {
